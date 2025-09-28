@@ -5,6 +5,8 @@ import LIBRARY from '../pages/library.jsx';
 import SCAN from '../pages/scan.jsx';
 import PROFILE from '../pages/profile.jsx';
 import BOOK_DETAIL-EDIT from '../pages/book-detail-edit.jsx';
+import INDEX from '../pages/index.jsx';
+import ME from '../pages/me.jsx';
 export const routers = [{
   id: "home",
   component: HOME
@@ -26,4 +28,10 @@ export const routers = [{
 }, {
   id: "book-detail-edit",
   component: BOOK_DETAIL-EDIT
+}, {
+  id: "index",
+  component: INDEX
+}, {
+  id: "me",
+  component: ME
 }]
