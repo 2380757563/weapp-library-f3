@@ -1,0 +1,73 @@
+
+{
+  "name": "books",
+  "title": "书籍",
+  "schemas": [
+    {
+      "name": "title",
+      "title": "书名",
+      "type": "String"
+    },
+    {
+      "name": "cover",
+      "title": "封面",
+      "type": "Image"
+    },
+    {
+      "name": "author",
+      "title": "作者",
+      "type": "String"
+    },
+    {
+      "name": "isbn",
+      "title": "ISBN",
+      "type": "String"
+    },
+    {
+      "name": "publisher",
+      "title": "出版社",
+      "type": "String"
+    },
+    {
+      "name": "pubdate",
+      "title": "出版日期",
+      "type": "String"
+    },
+    {
+      "name": "pages",
+      "title": "页数",
+      "type": "String"
+    },
+    {
+      "name": "price",
+      "title": "价格",
+      "type": "String"
+    },
+    {
+      "name": "summary",
+      "title": "简介",
+      "type": "MultiLineString"
+    },
+    {
+      "name": "group",
+      "title": "分组",
+      "type": "String"
+    },
+    {
+      "name": "status",
+      "title": "阅读状态",
+      "type": "String"
+    },
+    {
+      "name": "category",
+      "title": "分类",
+      "type": "String"
+    },
+    {
+      "name": "notes",
+      "title": "笔记",
+      "type": "MultiLineString"
+    }
+  ]
+}
+  

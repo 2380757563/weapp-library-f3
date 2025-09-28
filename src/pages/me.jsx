@@ -1,7 +1,7 @@
 // @ts-ignore;
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 // @ts-ignore;
-import { User, Settings, Download, Upload, BookOpen, BarChart3 } from 'lucide-react';
+import { User, Settings, Download, Upload, BookOpen, BarChart3, FileText } from 'lucide-react';
 // @ts-ignore;
 import { Button, Card, CardContent, CardHeader, useToast } from '@/components/ui';
 
@@ -10,17 +10,17 @@ export default function Me(props) {
     $w
   } = props;
   const [loading, setLoading] = useState(false);
-  const {
-    toast
-  } = useToast();
-
-  // 获取用户统计数据
   const [stats, setStats] = useState({
     totalBooks: 0,
     booksRead: 0,
     booksReading: 0,
     booksUnread: 0
   });
+  const {
+    toast
+  } = useToast();
+
+  // 加载统计数据
   useEffect(() => {
     loadStats();
   }, []);
@@ -47,6 +47,8 @@ export default function Me(props) {
       console.error('获取统计失败:', error);
     }
   };
+
+  // 导出Excel功能
   const handleExportExcel = async () => {
     try {
       setLoading(true);
@@ -66,11 +68,19 @@ export default function Me(props) {
         }
       });
       const books = result.records || [];
+      if (books.length === 0) {
+        toast({
+          title: '提示',
+          description: '书库中没有书籍可导出',
+          variant: 'destructive'
+        });
+        return;
+      }
 
-      // 生成CSV内容
-      const headers = ['书名', '作者', 'ISBN', '出版社', '出版日期', '页数', '价格', '状态', '分类', '添加时间'];
-      const rows = books.map(book => [book.title || '', book.author || '', book.isbn || '', book.publisher || '', book.pubdate || '', book.pages || '', book.price || '', book.status === 'read' ? '已读' : book.status === 'reading' ? '在读' : '未读', book.category || '未分类', book.createdAt ? new Date(book.createdAt).toLocaleDateString() : '']);
-      const csvContent = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+      // 生成Excel格式的CSV内容
+      const headers = ['书名', '作者', 'ISBN', '出版社', '出版日期', '页数', '价格', '阅读状态', '分类', '分组', '添加时间', '简介', '笔记'];
+      const rows = books.map(book => [book.title || '', book.author || '', book.isbn || '', book.publisher || '', book.pubdate || '', book.pages || '', book.price || '', book.status === 'read' ? '已读' : book.status === 'reading' ? '在读' : '未读', book.category || '未分类', book.group || '未分组', book.createdAt ? new Date(book.createdAt).toLocaleDateString('zh-CN') : '', book.summary || '', book.notes || '']);
+      const csvContent = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
 
       // 创建并下载文件
       const blob = new Blob(['\ufeff' + csvContent], {
@@ -78,18 +88,55 @@ export default function Me(props) {
       });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `我的书库_${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = `我的书库_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.csv`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       toast({
         title: '导出成功',
-        description: '书库数据已导出为Excel文件'
+        description: `已导出${books.length}本书籍信息`
       });
     } catch (error) {
       toast({
         title: '导出失败',
-        description: error.message,
+        description: error.message || '导出过程中发生错误',
         variant: 'destructive'
       });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 高级导出选项
+  const handleAdvancedExport = async format => {
+    try {
+      setLoading(true);
+
+      // 调用后端导出接口
+      const result = await $w.cloud.callFunction({
+        name: 'exportBooks',
+        data: {
+          format: format,
+          userId: $w.auth.currentUser?.userId
+        }
+      });
+      if (result.success && result.fileUrl) {
+        // 下载文件
+        const link = document.createElement('a');
+        link.href = result.fileUrl;
+        link.download = `书库导出_${new Date().toLocaleDateString('zh-CN')}.${format}`;
+        link.click();
+        toast({
+          title: '导出成功',
+          description: `已导出为${format.toUpperCase()}格式`
+        });
+      } else {
+        throw new Error(result.error || '导出失败');
+      }
+    } catch (error) {
+      // 回退到前端导出
+      await handleExportExcel();
     } finally {
       setLoading(false);
     }
@@ -153,24 +200,34 @@ export default function Me(props) {
                 <span className="text-sm text-gray-600">未读</span>
                 <span className="font-medium">{stats.booksUnread}本</span>
               </div>
-              {stats.totalBooks > 0 && <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{
-                width: `${stats.booksRead / stats.totalBooks * 100}%`
-              }}></div>
+              {stats.totalBooks > 0 && <div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="bg-blue-600 h-2 rounded-full" style={{
+                  width: `${(stats.booksRead / stats.totalBooks * 100).toFixed(1)}%`
+                }}></div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    已读 {stats.booksRead}/{stats.totalBooks} ({(stats.booksRead / stats.totalBooks * 100).toFixed(1)}%)
+                  </p>
                 </div>}
             </div>
           </CardContent>
         </Card>
 
-        {/* 功能设置 */}
+        {/* 数据管理 */}
         <Card>
           <CardHeader>
             <h3 className="font-semibold">数据管理</h3>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button onClick={handleExportExcel} disabled={loading} className="w-full justify-start" variant="outline">
+            <Button onClick={() => handleExportExcel()} disabled={loading} className="w-full justify-start" variant="outline">
               <Download className="w-4 h-4 mr-2" />
-              导出书库到Excel
+              {loading ? '导出中...' : '导出书库到Excel'}
+            </Button>
+            
+            <Button onClick={() => handleAdvancedExport('xlsx')} disabled={loading} className="w-full justify-start" variant="outline">
+              <FileText className="w-4 h-4 mr-2" />
+              {loading ? '导出中...' : '导出为Excel文件'}
             </Button>
             
             <Button className="w-full justify-start" variant="outline">
@@ -189,7 +246,7 @@ export default function Me(props) {
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-sm text-gray-600">
-              版本 1.0.0 | 云开发小程序
+              版本 2.0.0 | 云开发小程序 | 支持Excel导出
             </p>
           </CardContent>
         </Card>
